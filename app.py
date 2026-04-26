@@ -96,7 +96,16 @@ class DeepTextCNNLegacy(nn.Module):
         features = self.dropout(features)
         return self.classifier(features)
 
+def display_model_name(name):
+    name = str(name)
 
+    if "DeepTextCNN" in name:
+        return "DeepTextCNN"
+    if "CNNBiLSTM" in name:
+        return "CNNBiLSTM"
+
+
+    return name
 def build_deep_textcnn_from_checkpoint(checkpoint):
     """
     Auto-detect whether checkpoint is old or improved, then build the correct architecture.
@@ -541,11 +550,19 @@ def find_important_regions(saliency, window=20, top_n=5):
 def render_deep_saliency(models, dna_seq):
     st.subheader("🔥 DeepTextCNN Saliency Map")
 
-    if "DeepTextCNN" not in models or not isinstance(models["DeepTextCNN"], dict):
+    deep_key = None
+    for key, value in models.items():
+        if isinstance(value, dict) and "DeepTextCNN" in key:
+            deep_key = key
+            break
+
+    if deep_key is None:
         st.info("Không tìm thấy DeepTextCNN để tạo saliency map.")
         return
 
-    deep_pack = models["DeepTextCNN"]
+    deep_pack = models[deep_key]
+
+
     model = deep_pack["model"]
     max_len = deep_pack["max_len"]
 
@@ -683,7 +700,12 @@ with tab_predict:
             # Metrics
             st.subheader("💡 Tóm tắt rủi ro (Summary)")
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Top Model", str(top_row["Model"]), str(top_row["Prediction"]), delta_color="off")
+            m1.metric(
+                "Top Model",
+                display_model_name(top_row["Model"]),
+                str(top_row["Prediction"]),
+                delta_color="off"
+            )
             m2.metric("Trung bình rủi ro", f"{avg_risk*100:.1f}%", f"{high_risk_count}/{len(result_df)} model > {threshold*100:.0f}%", delta_color="inverse")
             m3.metric("Độ tương đồng (Consensus)", f"{consensus}/{len(result_df)}", f"Đồng thuận: {top_row['Prediction']}", delta_color="off")
             m4.metric("Dự đoán top 1", f"{top_row['Confidence']:.1f}% Tin cậy", top_row["Prediction"], delta_color="inverse" if top_row["Prediction"] == "Diabetic" else "normal")
@@ -719,7 +741,9 @@ with tab_predict:
 
             with c2:
                 st.subheader("📋 Bảng chi tiết")
+                
                 display_df = result_df.copy()
+                display_df["Model"] = display_df["Model"].apply(display_model_name)
                 display_df["Risk_Level"] = display_df["Diabetic_Prob"].apply(lambda prob: risk_label(prob, threshold))
                 display_df["Diabetic_Prob"] = (display_df["Diabetic_Prob"] * 100).round(2)
                 display_df["Confidence"] = display_df["Confidence"].round(2)
