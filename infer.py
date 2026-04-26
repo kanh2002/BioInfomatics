@@ -1,13 +1,17 @@
 import joblib
 from xgboost import XGBClassifier
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR / "model"
 
 # Load các thành phần
-vectorizer = joblib.load('model/tfidf_vectorizer.joblib')
-nusvc = joblib.load('model/nusvc_diabetes_model.joblib')
+vectorizer = joblib.load(MODEL_DIR / 'tfidf_vectorizer.joblib')
+nusvc = joblib.load(MODEL_DIR / 'nusvc_diabetes_model.joblib')
 
 # Load XGBoost
 xgb = XGBClassifier()
-xgb.load_model('model/xgb_diabetes_model.json')
+xgb.load_model(str(MODEL_DIR / 'xgb_diabetes_model.json'))
 
 # Ví dụ dự đoán một chuỗi DNA mới
 new_seq = ["""TTTTTTTACCAATATAAACAGGGCCGTTGACCCTTTCATTTTATTAAAATGGCACATAATTATTAAAACA
