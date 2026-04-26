@@ -1,0 +1,4 @@
+left_split,right_split,exact_duplicate_overlap,high_similarity_pairs,max_cosine_similarity
+train,val,0,0,0.9189079159474167
+train,test,0,0,0.9164859047079175
+val,test,0,0,0.9190158034731262
