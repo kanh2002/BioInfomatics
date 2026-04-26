@@ -498,20 +498,29 @@ def compute_deep_saliency(deep_model, dna_seq, max_len):
 
     def forward_hook(module, inp, out):
         acts["emb"] = out
-        out.retain_grad()
+        if out.requires_grad:
+            out.retain_grad()
 
     handle = model.embedding.register_forward_hook(forward_hook)
 
-    logits = model(encoded)
-    prob = torch.softmax(logits, dim=1)[0, 1]
-    model.zero_grad()
-    prob.backward()
+    try:
+        with torch.enable_grad():
+            logits = model(encoded)
+            prob = torch.softmax(logits, dim=1)[0, 1]
 
-    emb = acts["emb"]
-    grad = emb.grad
-    sal = grad.abs().sum(dim=2).detach().cpu().numpy()[0]
+            model.zero_grad(set_to_none=True)
+            prob.backward()
 
-    handle.remove()
+            emb = acts["emb"]
+            grad = emb.grad
+
+            if grad is None:
+                return np.zeros(min(len(dna_seq), max_len))
+
+            sal = grad.abs().sum(dim=2).detach().cpu().numpy()[0]
+
+    finally:
+        handle.remove()
 
     seq_len = min(len(dna_seq), max_len)
     sal = sal[:seq_len]
@@ -520,8 +529,6 @@ def compute_deep_saliency(deep_model, dna_seq, max_len):
         sal = sal / sal.max()
 
     return sal
-
-
 def find_important_regions(saliency, window=20, top_n=5):
     if len(saliency) == 0:
         return []
